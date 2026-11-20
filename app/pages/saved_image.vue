@@ -21,8 +21,8 @@ onMounted(() => {
   if (stored) {
     try {
       const parsed: string[] = JSON.parse(stored)
-      croppedImages.value = parsed
-      savedImagesState.value = parsed
+      croppedImages.value = Array.isArray(parsed) ? parsed : []
+      savedImagesState.value = croppedImages.value
     } catch {
       croppedImages.value = []
     }
@@ -54,147 +54,108 @@ const openPreview = (imgSrc: string, label: string) => {
 </script>
 
 <template>
-  <v-container class="py-8" style="max-width: 1080px;">
-    <!-- Header & Action Buttons -->
-    <div class="d-flex flex-column flex-sm-row justify-space-between align-sm-center ga-4 mb-6">
-      <div>
-        <div class="d-flex align-center ga-2 mb-1">
-          <h1 class="text-h5 text-sm-h4 font-weight-bold">Saved Cropped Images</h1>
-          <v-chip
-            size="small"
-            color="primary"
-            variant="tonal"
-          >
-            {{ croppedImages.length }} {{ croppedImages.length === 1 ? 'item' : 'items' }}
-          </v-chip>
+  <div class="editor-page">
+    <div class="editor-container">
+      <!-- Top Header Card (Katulad ng sa Image Cropper) -->
+      <header class="top-bar">
+        <div>
+          <h1 class="title">Saved Cropped Images</h1>
+          <p class="subtitle">
+            Manage, preview, or download your cropped images ({{ croppedImages.length }}).
+          </p>
         </div>
-        <p class="text-body-2 text-medium-emphasis mb-0">
-          Manage, preview, or download your cropped images stored locally.
-        </p>
-      </div>
 
-      <div class="d-flex ga-2 flex-wrap">
-        <v-btn
-          color="primary"
-          variant="flat"
-          prepend-icon="mdi-crop"
-          rounded="lg"
-          @click="backToCropper"
-        >
-          Crop Another Image
-        </v-btn>
+        <div class="header-actions">
+          <button type="button" class="btn btn-outline" @click="backToCropper">
+            Crop Another Image
+          </button>
 
-        <v-btn
-          v-if="croppedImages.length > 0"
-          color="error"
-          variant="tonal"
-          prepend-icon="mdi-delete-sweep-outline"
-          rounded="lg"
-          @click="clearSavedImages"
-        >
-          Clear All
-        </v-btn>
-      </div>
-    </div>
+          <button
+            v-if="croppedImages.length > 0"
+            type="button"
+            class="btn btn-danger-outline"
+            @click="clearSavedImages"
+          >
+            Clear All
+          </button>
+        </div>
+      </header>
 
-    <!-- Gallery Grid -->
-    <v-row v-if="croppedImages.length > 0">
-      <v-col
-        v-for="(imgSrc, index) in croppedImages"
-        :key="index"
-        cols="12"
-        sm="6"
-        md="4"
-      >
-        <v-card
-          rounded="lg"
-          elevation="2"
-          class="gallery-card d-flex flex-column h-100"
-        >
-          <!-- Card Top Label -->
-          <div class="d-flex justify-space-between align-center px-4 pt-3 pb-2">
-            <div class="d-flex align-center ga-2">
-              <span class="text-subtitle-2 font-weight-bold">
+      <!-- Gallery Card (Kapag may saved images) -->
+      <section v-if="croppedImages.length > 0" class="card">
+        <div class="card-header">
+          <h2>Saved Images</h2>
+        </div>
+
+        <div class="gallery-grid">
+          <div
+            v-for="(imgSrc, index) in croppedImages"
+            :key="index"
+            class="item-card"
+          >
+            <div class="item-top">
+              <span class="item-label">
                 Image #{{ croppedImages.length - index }}
+                <span v-if="index === 0" class="latest-tag">(Latest)</span>
               </span>
-              <v-chip
-                v-if="index === 0"
-                size="x-small"
-                color="success"
-                variant="tonal"
+
+              <button
+                type="button"
+                class="icon-btn"
+                title="Delete image"
+                @click="deleteImage(index)"
               >
-                Latest
-              </v-chip>
+                <v-icon icon="mdi-delete-outline" size="18" color="error" />
+              </button>
             </div>
 
-            <v-btn
-              icon="mdi-delete-outline"
-              variant="text"
-              size="small"
-              color="error"
-              title="Delete image"
-              @click="deleteImage(index)"
-            />
-          </div>
-
-          <!-- Image Preview Box -->
-          <div
-            class="image-box mx-4 pa-2 rounded-lg d-flex align-center justify-center"
-            @click="openPreview(imgSrc, `Image #${croppedImages.length - index}`)"
-            title="Click to preview"
-          >
-            <img
-              :src="imgSrc"
-              :alt="`Cropped image ${index + 1}`"
-              class="preview-img"
-            />
-          </div>
-
-          <!-- Card Footer Actions -->
-          <div class="d-flex justify-space-between align-center px-4 py-3 mt-auto">
-            <v-btn
-              variant="text"
-              size="small"
-              prepend-icon="mdi-eye-outline"
+            <div
+              class="image-box"
+              title="Click to preview"
               @click="openPreview(imgSrc, `Image #${croppedImages.length - index}`)"
             >
-              Preview
-            </v-btn>
+              <img
+                :src="imgSrc"
+                :alt="`Cropped image ${index + 1}`"
+                class="preview-img"
+              />
+            </div>
 
-            <v-btn
-              :href="imgSrc"
-              :download="`cropped-image-${croppedImages.length - index}.png`"
-              variant="tonal"
-              color="primary"
-              size="small"
-              prepend-icon="mdi-download"
-              rounded="md"
-            >
-              Download
-            </v-btn>
+            <div class="item-actions">
+              <button
+                type="button"
+                class="btn btn-outline btn-sm"
+                @click="openPreview(imgSrc, `Image #${croppedImages.length - index}`)"
+              >
+                Preview
+              </button>
+
+              <a
+                :href="imgSrc"
+                :download="`cropped-image-${croppedImages.length - index}.png`"
+                class="btn btn-outline btn-sm btn-link"
+              >
+                Download
+              </a>
+            </div>
           </div>
-        </v-card>
-      </v-col>
-    </v-row>
+        </div>
+      </section>
 
-    <!-- Empty State -->
-    <v-sheet
-      v-else
-      border
-      rounded="xl"
-      class="pa-10 text-center bg-grey-lighten-5"
-    >
-      <v-icon
-        icon="mdi-image-off-outline"
-        size="52"
-        color="grey"
-        class="mb-3"
-      />
-      <div class="text-h6 font-weight-bold mb-1">No image has been saved yet</div>
-      <div class="text-body-2 text-medium-emphasis mb-0">
-        Start cropping a photo and your saved results will appear here.
-      </div>
-    </v-sheet>
+      <!-- Empty State Card (Kapag walang saved image) -->
+      <section v-else class="card">
+        <div class="card-header">
+          <h2>Saved Images</h2>
+        </div>
+
+        <div class="empty-box">
+          <div class="empty-title">No image has been saved yet</div>
+          <div class="empty-hint">
+            Start cropping a photo and your saved results will appear here.
+          </div>
+        </div>
+      </section>
+    </div>
 
     <!-- Full Preview Dialog -->
     <v-dialog v-model="previewDialog" max-width="680">
@@ -209,11 +170,11 @@ const openPreview = (imgSrc: string, label: string) => {
           />
         </div>
 
-        <div class="d-flex justify-center align-center bg-grey-lighten-4 rounded-lg pa-3">
+        <div class="modal-image-box">
           <img
             :src="previewSrc"
             :alt="previewTitle"
-            style="max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 6px;"
+            class="modal-preview-img"
           />
         </div>
 
@@ -221,9 +182,7 @@ const openPreview = (imgSrc: string, label: string) => {
           <v-btn
             :href="previewSrc"
             :download="`${previewTitle.toLowerCase().replace(/\s+/g, '-')}.png`"
-            color="primary"
-            variant="flat"
-            prepend-icon="mdi-download"
+            variant="outlined"
             rounded="lg"
           >
             Download Image
@@ -231,23 +190,158 @@ const openPreview = (imgSrc: string, label: string) => {
         </div>
       </v-card>
     </v-dialog>
-  </v-container>
+  </div>
 </template>
 
 <style scoped>
-.gallery-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+.editor-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  padding: 32px 16px;
+  color: #0f172a;
 }
 
-.gallery-card:hover {
-  transform: translateY(-3px);
+.editor-container {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.empty-box {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  background: #f8fafc;
+}
+
+.empty-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.item-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.latest-tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: #fef2f2;
 }
 
 .image-box {
-  height: 210px;
-  background: repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  height: 190px;
   border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   overflow: hidden;
 }
@@ -256,6 +350,69 @@ const openPreview = (imgSrc: string, label: string) => {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: 6px;
+}
+
+.item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.btn:hover {
+  background: #f1f5f9;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  flex: 1;
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.btn-danger-outline {
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.btn-danger-outline:hover {
+  background: #fef2f2;
+}
+
+.modal-image-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-preview-img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: 6px;
 }
 </style>
